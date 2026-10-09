@@ -4,6 +4,8 @@
 
 **mstop** is a terminal system monitor for Linux. It labels every value in plain language with explicit units, gives every graph a scale and a time axis, and marks status with symbols as well as colour. Compared to tools like btop or htop, it brings in more data sources (multiple GPUs, sensors and battery, SMART, systemd, containers, a 24-hour history) while keeping its own overhead around 2% of a single core.
 
+![mstop running a parallel Rust build on a hybrid-GPU laptop](docs/screenshot.png)
+
 ## Features
 
 ### CPU (panel 1)
