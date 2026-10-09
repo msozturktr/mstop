@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    # Built on an older Ubuntu so the binary runs on distributions with glibc 2.35 or newer.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - name: Package
+        id: package
+        run: |
+          name="mstop-${GITHUB_REF_NAME}-x86_64-linux-gnu"
+          mkdir "$name"
+          cp target/release/mstop README.md LICENSE "$name"/
+          tar -czf "$name.tar.gz" "$name"
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - name: Upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            "${{ steps.package.outputs.name }}.tar.gz" \
+            "${{ steps.package.outputs.name }}.tar.gz.sha256" \
+            --clobber
