@@ -257,7 +257,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App, snap: &Snapshot) {
                 color: ACCENT_NET_UP,
             },
         ];
-        let fmt_y = |v: f64| format!("{:.1} MB/s", v / 1e6);
+        let fmt_y = |v: f64| fmt::rate(v);
         render_series(
             f.buffer_mut(),
             Rect::new(inner.x, inner.y + used + 1, inner.width, graph_h - 1),

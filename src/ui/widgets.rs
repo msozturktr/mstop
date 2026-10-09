@@ -7,8 +7,6 @@ use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Padding};
 
-const PARTIALS: [char; 8] = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉'];
-
 pub fn truncate(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         s.to_string()
@@ -63,32 +61,32 @@ pub fn panel_block(
     block
 }
 
-/// Horizontal meter: full blocks plus a partial block, track shown with `░`.
+/// Horizontal meter drawn as a heavy line: filled cells in `fg`, a half cell (`╸`) for the
+/// remainder, and the rest of the track in `TRACK`. Line glyphs stay inside their cell in
+/// every terminal, unlike block elements, which some terminals stretch to the line height.
 pub fn bar(frac: f64, width: usize, fg: Color) -> Vec<Span<'static>> {
-    let frac = frac.clamp(0.0, 1.0);
-    let cells = frac * width as f64;
+    let cells = frac.clamp(0.0, 1.0) * width as f64;
     let full = (cells.floor() as usize).min(width);
-    let part = ((cells - full as f64) * 8.0) as usize;
-    let mut filled = "█".repeat(full);
+    let mut filled = "━".repeat(full);
     let mut used = full;
-    if full < width && part > 0 {
-        filled.push(PARTIALS[part.min(7)]);
+    if full < width && cells - full as f64 >= 0.5 {
+        filled.push('╸');
         used += 1;
     }
     vec![
         Span::styled(filled, Style::default().fg(fg)),
-        Span::styled("░".repeat(width - used), Style::default().fg(TRACK)),
+        Span::styled("━".repeat(width - used), Style::default().fg(TRACK)),
     ]
 }
 
-/// Labeled meter: `label ▕████░░░▏`.
+/// Labeled meter: `label ━━━━━━━━ ` (one space of padding on each side of the bar).
 pub fn meter(label: &str, frac: f64, bar_w: usize, fg: Color) -> Vec<Span<'static>> {
     let mut v = vec![
         Span::styled(label.to_string(), theme::dim()),
-        Span::styled("▕", theme::muted()),
+        Span::raw(" "),
     ];
     v.extend(bar(frac, bar_w, fg));
-    v.push(Span::styled("▏", theme::muted()));
+    v.push(Span::raw(" "));
     v
 }
 

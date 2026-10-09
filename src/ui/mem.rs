@@ -115,9 +115,9 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App, snap: &Snapshot) {
         (((m.cache as f64 / total) * w as f64).round() as usize).min(w.saturating_sub(used_w));
     let free_w = w.saturating_sub(used_w + cache_w);
     let stacked = Line::from(vec![
-        Span::styled("█".repeat(used_w), Style::default().fg(ACCENT_MEM)),
-        Span::styled("█".repeat(cache_w), Style::default().fg(CACHE)),
-        Span::styled("░".repeat(free_w), Style::default().fg(TRACK)),
+        Span::styled("━".repeat(used_w), Style::default().fg(ACCENT_MEM)),
+        Span::styled("━".repeat(cache_w), Style::default().fg(CACHE)),
+        Span::styled("━".repeat(free_w), Style::default().fg(TRACK)),
     ]);
     let legend = Line::from(vec![
         Span::styled("■ ", Style::default().fg(ACCENT_MEM)),
@@ -127,7 +127,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App, snap: &Snapshot) {
             format!("cache+buffers {}   ", fmt::bytes(m.cache)),
             theme::dim(),
         ),
-        Span::styled("░ ", Style::default().fg(MUTED)),
+        Span::styled("■ ", Style::default().fg(TRACK)),
         Span::styled(format!("free {}", fmt::bytes(m.free())), theme::dim()),
     ]);
     let at = 6.min(lines.len());

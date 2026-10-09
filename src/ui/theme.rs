@@ -4,7 +4,7 @@ use ratatui::style::{Color, Modifier, Style};
 
 pub const BG: Color = Color::Rgb(0x0d, 0x11, 0x17);
 pub const PANEL_BG: Color = Color::Rgb(0x09, 0x0f, 0x17);
-pub const BORDER: Color = Color::Rgb(0x1e, 0x2a, 0x3c);
+pub const BORDER: Color = Color::Rgb(0x2e, 0x3f, 0x57);
 pub const TEXT: Color = Color::Rgb(0xe6, 0xed, 0xf3);
 pub const DIM: Color = Color::Rgb(0x8b, 0x9b, 0xb4);
 pub const MUTED: Color = Color::Rgb(0x4b, 0x6a, 0x9b);
@@ -28,7 +28,7 @@ pub const CRIT: Color = Color::Rgb(0xf8, 0x71, 0x71);
 /// Cache/buffers segment of the stacked RAM bar.
 pub const CACHE: Color = Color::Rgb(0x5b, 0x4b, 0x9a);
 /// Unfilled part of meters and the free segment of stacked bars.
-pub const TRACK: Color = Color::Rgb(0x1e, 0x2a, 0x3c);
+pub const TRACK: Color = Color::Rgb(0x2a, 0x37, 0x4b);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Sev {

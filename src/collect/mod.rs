@@ -49,7 +49,7 @@ pub struct Collector {
     last: Instant,
 }
 
-fn proc_kind() -> ProcessRefreshKind {
+pub(crate) fn proc_kind() -> ProcessRefreshKind {
     ProcessRefreshKind::nothing()
         .with_cpu()
         .with_memory()

@@ -99,6 +99,33 @@ pub struct ProcsInfo {
 pub struct ProcSampler {
     users: Users,
     names: HashMap<u32, String>,
+    /// Per process instance (pid, start time): comm when first seen, plus name and command
+    /// line re-read after an exec. sysinfo only reads those once per process, so without
+    /// this a process that execs keeps showing the program it started as.
+    execs: HashMap<(u32, u64), ExecState>,
+}
+
+struct ExecState {
+    first_comm: String,
+    comm: String,
+    cmd: String,
+}
+
+fn read_comm(pid: u32) -> Option<String> {
+    let s = std::fs::read_to_string(format!("/proc/{pid}/comm")).ok()?;
+    Some(s.trim_end_matches('\n').to_string())
+}
+
+fn read_cmdline(pid: u32) -> String {
+    std::fs::read(format!("/proc/{pid}/cmdline"))
+        .map(|b| {
+            b.split(|c| *c == 0)
+                .filter(|a| !a.is_empty())
+                .map(|a| String::from_utf8_lossy(a).into_owned())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .unwrap_or_default()
 }
 
 /// Thread count from the link count of /proc/PID/task (= threads + 2); one cheap stat call.
@@ -125,6 +152,7 @@ impl ProcSampler {
         Self {
             users: Users::new_with_refreshed_list(),
             names: HashMap::new(),
+            execs: HashMap::new(),
         }
     }
 
@@ -149,6 +177,7 @@ impl ProcSampler {
     pub fn sample(&mut self, sys: &System, elapsed: f64) -> ProcsInfo {
         let elapsed = elapsed.max(0.05);
         let mut out = ProcsInfo::default();
+        let mut seen = std::collections::HashSet::new();
         for p in sys.processes().values() {
             // Skip individual threads that sysinfo may list as separate entries.
             if p.thread_kind().is_some() {
@@ -156,13 +185,31 @@ impl ProcSampler {
             }
             let state = state_char(p.status());
             let threads = thread_count(p.pid().as_u32());
-            let name = p.name().to_string_lossy().into_owned();
+            let pid = p.pid().as_u32();
+            let mut name = p.name().to_string_lossy().into_owned();
             let mut cmd = p
                 .cmd()
                 .iter()
                 .map(|s| s.to_string_lossy())
                 .collect::<Vec<_>>()
                 .join(" ");
+            if let Some(comm) = read_comm(pid) {
+                let key = (pid, p.start_time());
+                seen.insert(key);
+                let e = self.execs.entry(key).or_insert_with(|| ExecState {
+                    first_comm: comm.clone(),
+                    comm: comm.clone(),
+                    cmd: String::new(),
+                });
+                if comm != e.first_comm {
+                    if comm != e.comm || e.cmd.is_empty() {
+                        e.cmd = read_cmdline(pid);
+                        e.comm = comm;
+                    }
+                    name = e.comm.clone();
+                    cmd = e.cmd.clone();
+                }
+            }
             if cmd.is_empty() {
                 cmd = name.clone();
             }
@@ -189,6 +236,7 @@ impl ProcSampler {
                 _ => out.sleeping += 1,
             }
         }
+        self.execs.retain(|k, _| seen.contains(k));
         out.total = out.list.len();
         out
     }
@@ -208,5 +256,42 @@ mod tests {
             Some("foo.scope")
         );
         assert_eq!(parse_cgroup("0::/\n").as_deref(), Some("/"));
+    }
+}
+
+#[cfg(test)]
+mod exec_tests {
+    use super::ProcSampler;
+    use std::process::Command;
+    use std::time::Duration;
+    use sysinfo::{ProcessesToUpdate, System};
+
+    #[test]
+    fn exec_updates_name_and_command() {
+        let mut child = Command::new("sh")
+            .args(["-c", "sleep 0.3; exec sleep 5"])
+            .spawn()
+            .expect("spawn sh");
+        let pid = child.id();
+        let mut sys = System::new();
+        let mut sampler = ProcSampler::new();
+        let kind = crate::collect::proc_kind();
+        let find = |sys: &mut System, sampler: &mut ProcSampler| {
+            sys.refresh_processes_specifics(ProcessesToUpdate::All, true, kind);
+            sampler
+                .sample(sys, 1.0)
+                .list
+                .into_iter()
+                .find(|p| p.pid == pid)
+                .expect("child listed")
+        };
+        let before = find(&mut sys, &mut sampler);
+        assert_eq!(before.name, "sh");
+        std::thread::sleep(Duration::from_millis(800));
+        let after = find(&mut sys, &mut sampler);
+        let _ = child.kill();
+        let _ = child.wait();
+        assert_eq!(after.name, "sleep");
+        assert_eq!(after.cmd, "sleep 5");
     }
 }

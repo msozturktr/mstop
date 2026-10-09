@@ -66,9 +66,9 @@ fn temp_line(label: &str, lw: usize, t: &TempSensor) -> Vec<Span<'static>> {
         format!("{:<lw$} ", truncate(label, lw)),
         theme::dim(),
     )];
-    v.push(Span::styled("▕", theme::muted()));
+    v.push(Span::raw(" "));
     v.extend(bar(t.celsius / scale, BAR_W, sev.color()));
-    v.push(Span::styled("▏", theme::muted()));
+    v.push(Span::raw(" "));
     v.push(Span::styled(
         format!(" {:>5.1} °C", t.celsius),
         if sev == Sev::Ok {
